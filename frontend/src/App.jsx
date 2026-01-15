@@ -4,48 +4,56 @@ import { AuthProvider } from './context/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
-
-// Componente temporal para Dashboard
-const DashboardTemp = () => (
-  <div className="min-h-screen bg-gray-50 p-8">
-    <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-4 text-gray-900">Dashboard</h1>
-      <div className="bg-white rounded-2xl shadow-lg p-6">
-        <p className="text-gray-700">¡Has iniciado sesión exitosamente en Parchate! 🎉</p>
-        <p className="text-gray-600 mt-2">Esta es tu área personal para gestionar tu bienestar emocional.</p>
-      </div>
-    </div>
-  </div>
-);
+import Dashboard from './pages/Dashboard';
+import Journal from './pages/Journal';
+import Chat from './pages/Chat';
 
 function App() {
   return (
     <Router>
       <AuthProvider>
         <Routes>
-          {/* Rutas públicas */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          
-          {/* Redirección raíz */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          
-          {/* Ruta protegida */}
           <Route 
             path="/dashboard" 
             element={
               <PrivateRoute>
-                <DashboardTemp />
+                <Dashboard />
               </PrivateRoute>
             } 
           />
-          
-          {/* Ruta 404 */}
+          <Route 
+            path="/journal" 
+            element={
+              <PrivateRoute>
+                <Journal />
+              </PrivateRoute>
+            } 
+          />
+          <Route 
+            path="/chat" 
+            element={
+              <PrivateRoute>
+                <Chat />
+              </PrivateRoute>
+            } 
+          />
           <Route path="*" element={
-            <div className="min-h-screen flex items-center justify-center">
-              <div className="text-center">
-                <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
-                <p className="text-gray-600">Página no encontrada</p>
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
+              <div className="text-center max-w-md">
+                <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-500 rounded-3xl mx-auto mb-6 flex items-center justify-center">
+                  <span className="text-white text-4xl">404</span>
+                </div>
+                <h1 className="text-4xl font-bold text-gray-900 mb-4">Página no encontrada</h1>
+                <p className="text-gray-600 mb-8">Esta página no existe o ha sido movida.</p>
+                <a 
+                  href="/dashboard" 
+                  className="inline-block px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-purple-600 transition-all"
+                >
+                  Volver al inicio
+                </a>
               </div>
             </div>
           } />

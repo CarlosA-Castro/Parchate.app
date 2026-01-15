@@ -1,120 +1,224 @@
 import React from 'react';
-import { FiBarChart2, FiCalendar, FiTrendingUp, FiPlus, FiMessageCircle } from 'react-icons/fi';
-import Button from '../components/Button';
-import Card, { CardBody, CardHeader } from '../components/Card';
+import { useAuth } from '../context/AuthContext';
+import { 
+  FiBook, 
+  FiMessageSquare, 
+  FiCalendar,
+  FiLogOut,
+  FiUser,
+  FiTarget,
+  FiTrendingUp,
+  FiHeart,
+  FiArrowRight
+} from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
+  const { user, logout } = useAuth();
+
+  const dailyQuote = {
+    text: "La felicidad de tu vida depende de la calidad de tus pensamientos.",
+    author: "Marco Aurelio"
+  };
+
+  const stats = [
+    { label: 'Días seguidos', value: '7', change: '+2', icon: FiTarget },
+    { label: 'Reflexiones', value: '12', change: '+3', icon: FiBook },
+    { label: 'Consistencia', value: '85%', change: '+5%', icon: FiTrendingUp },
+    { label: 'Bienestar', value: '4.8', change: '+0.3', icon: FiHeart }
+  ];
+
+  const recentEntries = [
+    { date: 'Hoy', title: 'Sobre el control', preview: 'Solo puedo controlar mis propias acciones...' },
+    { date: 'Ayer', title: 'Virtud en acción', preview: 'La verdadera virtud está en actuar...' },
+    { date: '15 Ene', title: 'Claridad mental', preview: 'El orden externo refleja el interno...' }
+  ];
+
   return (
-    <div className="space-y-8 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Bienvenido a Parchate</h1>
-          <p className="text-gray-600">Tu espacio seguro para gestionar emociones y pensamientos</p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="primary">
-            <FiPlus className="mr-2" />
-            Nueva entrada
-          </Button>
-          <Button variant="secondary">
-            <FiMessageCircle className="mr-2" />
-            Chat con IA
-          </Button>
+    <div className="min-h-screen bg-white text-gray-900">
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
+        <div className="px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-black rounded-xl flex items-center justify-center">
+                <span className="text-white font-bold text-sm">π</span>
+              </div>
+              <div>
+                <h1 className="text-lg font-bold">Parchate</h1>
+                <p className="text-xs text-gray-500">Journal estoico</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <button className="text-gray-600">
+                <FiCalendar size={20} />
+              </button>
+              <button 
+                onClick={logout}
+                className="p-2 hover:bg-gray-100 rounded-xl"
+              >
+                <FiLogOut size={20} />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-      
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card hover>
-          <CardBody>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Entradas del diario</p>
-                <p className="text-3xl font-bold mt-2">0</p>
-              </div>
-              <div className="p-3 bg-blue-50 rounded-xl">
-                <FiCalendar className="text-blue-600 text-xl" />
-              </div>
+
+      {/* Main Content */}
+      <div className="px-4 py-8">
+        {/* Welcome */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-medium mb-1">
+            {user?.username || 'Bienvenido'}
+          </h2>
+          <p className="text-gray-600 text-sm">
+            {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </p>
+        </div>
+
+        {/* Quote Card */}
+        <div className="mb-8 p-6 bg-gray-50 rounded-2xl border border-gray-200">
+          <div className="flex gap-4">
+            <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-lg">"</span>
             </div>
-          </CardBody>
-        </Card>
-        
-        <Card hover>
-          <CardBody>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Estado emocional</p>
-                <p className="text-3xl font-bold mt-2">Neutro</p>
-              </div>
-              <div className="p-3 bg-green-50 rounded-xl">
-                <FiTrendingUp className="text-green-600 text-xl" />
-              </div>
+            <div>
+              <p className="text-gray-700 italic mb-2 text-lg">"{dailyQuote.text}"</p>
+              <p className="text-sm text-gray-600">— {dailyQuote.author}</p>
             </div>
-          </CardBody>
-        </Card>
-        
-        <Card hover>
-          <CardBody>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Conversaciones IA</p>
-                <p className="text-3xl font-bold mt-2">0</p>
+          </div>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 gap-4 mb-8">
+          {stats.map((stat, index) => (
+            <div key={index} className="p-4 bg-white rounded-2xl border border-gray-200">
+              <div className="flex items-center justify-between mb-2">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                  index === 0 ? 'bg-black' : 'bg-gray-100'
+                }`}>
+                  <stat.icon className={index === 0 ? "text-white" : "text-gray-700"} size={18} />
+                </div>
+                <span className="text-sm font-medium text-green-600">{stat.change}</span>
               </div>
-              <div className="p-3 bg-purple-50 rounded-xl">
-                <FiBarChart2 className="text-purple-600 text-xl" />
-              </div>
+              <p className="text-2xl font-bold mb-1">{stat.value}</p>
+              <p className="text-xs text-gray-600">{stat.label}</p>
             </div>
-          </CardBody>
-        </Card>
-      </div>
-      
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <h2 className="text-xl font-bold text-gray-900">Acciones Rápidas</h2>
-        </CardHeader>
-        <CardBody>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Link to="/journal" className="block">
-              <div className="p-6 border-2 border-dashed border-gray-300 rounded-2xl hover:border-black hover:bg-gray-50 transition-all text-center cursor-pointer">
-                <div className="text-5xl mb-4">📝</div>
-                <h3 className="font-semibold text-lg mb-2">Nueva entrada en el diario</h3>
-                <p className="text-gray-600">Escribe cómo te sientes hoy</p>
+          ))}
+        </div>
+
+        {/* Quick Actions */}
+        <div className="mb-8">
+          <h3 className="text-lg font-medium mb-4">Acciones rápidas</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <Link 
+              to="/journal"
+              className="p-6 rounded-2xl border-2 border-black flex flex-col items-center justify-center hover:bg-black hover:text-white transition-colors"
+            >
+              <div className="w-12 h-12 rounded-xl bg-black flex items-center justify-center mb-3">
+                <FiBook className="text-white" size={24} />
               </div>
+              <span className="font-medium">Diario</span>
+              <span className="text-xs mt-1">Escribe tu reflexión</span>
             </Link>
             
-            <Link to="/chat" className="block">
-              <div className="p-6 border-2 border-dashed border-gray-300 rounded-2xl hover:border-black hover:bg-gray-50 transition-all text-center cursor-pointer">
-                <div className="text-5xl mb-4">💬</div>
-                <h3 className="font-semibold text-lg mb-2">Hablar con Parchate</h3>
-                <p className="text-gray-600">Conversa con nuestra IA emocional</p>
+            <Link 
+              to="/chat"
+              className="p-6 rounded-2xl border-2 border-gray-300 flex flex-col items-center justify-center hover:border-black transition-colors"
+            >
+              <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mb-3">
+                <FiMessageSquare className="text-gray-700" size={24} />
               </div>
+              <span className="font-medium">Sabiduría IA</span>
+              <span className="text-xs mt-1">Conversa con sabios</span>
             </Link>
           </div>
-        </CardBody>
-      </Card>
-      
-      {/* Welcome Message */}
-      <Card className="bg-gradient-to-r from-gray-900 to-black text-white">
-        <CardBody>
-          <div className="max-w-2xl">
-            <h2 className="text-2xl font-bold mb-4">Tu viaje emocional comienza aquí</h2>
-            <p className="text-gray-300 mb-6">
-              Parchate está diseñado para ayudarte a procesar tus emociones de manera saludable.
-              Usa el diario para reflexionar y el chat para obtener perspectivas.
-            </p>
-            <div className="flex flex-wrap gap-4">
-              <Button variant="primary" className="bg-white text-black hover:bg-gray-100">
-                Comenzar diario
-              </Button>
-              <Button variant="ghost" className="border-white/30 text-white hover:bg-white/10">
-                Explorar funciones
-              </Button>
+        </div>
+
+        {/* Recent Entries */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium">Reflexiones recientes</h3>
+            <Link 
+              to="/journal" 
+              className="text-sm text-gray-600 hover:text-black flex items-center gap-1"
+            >
+              Ver todas
+              <FiArrowRight size={14} />
+            </Link>
+          </div>
+          
+          <div className="space-y-3">
+            {recentEntries.map((entry, index) => (
+              <div 
+                key={index}
+                className="p-4 rounded-2xl border border-gray-200 hover:border-gray-300 transition-colors"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                    {entry.date}
+                  </span>
+                </div>
+                <h4 className="font-medium mb-1">{entry.title}</h4>
+                <p className="text-sm text-gray-600 line-clamp-2">
+                  {entry.preview}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Insight */}
+        <div className="p-6 bg-black text-white rounded-2xl">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-sm">
+              <span className="text-2xl">⚡</span>
+            </div>
+            <div>
+              <h4 className="font-medium mb-1">Insight del día</h4>
+              <p className="text-sm text-white/80">
+                La consistencia en pequeñas acciones genera grandes resultados a largo plazo.
+              </p>
             </div>
           </div>
-        </CardBody>
-      </Card>
+        </div>
+      </div>
+
+      {/* Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
+        <div className="px-4 py-3">
+          <div className="flex justify-around">
+            <Link to="/dashboard" className="flex flex-col items-center gap-1 p-2">
+              <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center">
+                <span className="text-white font-bold">π</span>
+              </div>
+              <span className="text-xs font-medium">Inicio</span>
+            </Link>
+            
+            <Link to="/journal" className="flex flex-col items-center gap-1 p-2">
+              <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
+                <FiBook className="text-gray-700" />
+              </div>
+              <span className="text-xs text-gray-600">Diario</span>
+            </Link>
+            
+            <Link to="/chat" className="flex flex-col items-center gap-1 p-2">
+              <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
+                <FiMessageSquare className="text-gray-700" />
+              </div>
+              <span className="text-xs text-gray-600">Sabiduría</span>
+            </Link>
+            
+            <button className="flex flex-col items-center gap-1 p-2">
+              <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
+                <FiUser className="text-gray-700" />
+              </div>
+              <span className="text-xs text-gray-600">Perfil</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

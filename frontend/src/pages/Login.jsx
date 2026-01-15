@@ -1,16 +1,22 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FiMail, FiLock, FiLogIn, FiAlertCircle } from 'react-icons/fi';
-import Button from '../components/Button';
-import Input from '../components/Input';
-import Card, { CardBody, CardFooter } from '../components/Card';
+import { 
+  FiMail, 
+  FiLock, 
+  FiLogIn,
+  FiAlertCircle,
+  FiEye,
+  FiEyeOff,
+  FiArrowRight
+} from 'react-icons/fi';
 
 const Login = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -24,6 +30,7 @@ const Login = () => {
       ...formData,
       [e.target.name]: e.target.value
     });
+    if (error) setError('');
   };
 
   const handleSubmit = async (e) => {
@@ -36,90 +43,154 @@ const Login = () => {
     if (result.success) {
       navigate(from, { replace: true });
     } else {
-      setError(result.error);
+      setError(result.error || 'Error al iniciar sesión');
     }
     
     setLoading(false);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full animate-fade-in">
-        {/* Logo y Header */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-black to-gray-800 rounded-2xl mb-4 shadow-hard">
-            <span className="text-white text-2xl">🧠</span>
+    <div className="min-h-screen bg-white flex items-center justify-center p-4">
+      <div className="max-w-md w-full">
+        {/* Logo */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-black rounded-3xl mb-6">
+            <span className="text-white font-bold text-2xl">π</span>
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2 tracking-tight">Parchate</h1>
-          <p className="text-gray-600">Tu espacio seguro para el bienestar emocional</p>
+          <h1 className="text-4xl font-bold mb-2 tracking-tight">
+            Parchate
+          </h1>
+          <p className="text-gray-600">
+            Journal para la claridad mental
+          </p>
         </div>
         
-        {/* Card de Login */}
-        <Card variant="elevated" hover className="overflow-hidden">
-          <CardBody>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Bienvenido de nuevo</h2>
-            <p className="text-gray-600 mb-8">Ingresa a tu cuenta para continuar</p>
+        {/* Login Card */}
+        <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden">
+          <div className="p-8">
+            <h2 className="text-2xl font-bold mb-2">Iniciar sesión</h2>
+            <p className="text-gray-600 mb-8">Continúa tu camino hacia el bienestar</p>
             
             {error && (
               <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
                 <div className="flex items-center text-red-700">
                   <FiAlertCircle className="mr-2" />
-                  <span>{error}</span>
+                  <span className="text-sm">{error}</span>
                 </div>
               </div>
             )}
             
             <form onSubmit={handleSubmit} className="space-y-6">
-              <Input
-                label="Correo electrónico"
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="tu@email.com"
-                leftIcon={<FiMail />}
-                required
-                disabled={loading}
-              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Correo electrónico
+                </label>
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+                    <FiMail />
+                  </div>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="nombre@email.com"
+                    required
+                    disabled={loading}
+                    className="w-full pl-12 pr-4 py-4 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-lg"
+                  />
+                </div>
+              </div>
               
-              <Input
-                label="Contraseña"
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="••••••••"
-                leftIcon={<FiLock />}
-                required
-                disabled={loading}
-              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Contraseña
+                </label>
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+                    <FiLock />
+                  </div>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="••••••••"
+                    required
+                    disabled={loading}
+                    className="w-full pl-12 pr-12 py-4 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 p-2"
+                  >
+                    {showPassword ? <FiEyeOff /> : <FiEye />}
+                  </button>
+                </div>
+              </div>
               
-              <Button
+              <div className="flex justify-end">
+                <Link 
+                  to="/forgot-password" 
+                  className="text-sm text-gray-600 hover:text-black font-medium"
+                >
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </div>
+              
+              <button
                 type="submit"
-                variant="primary"
-                size="large"
-                fullWidth
-                loading={loading}
-                className="mt-2"
+                disabled={loading}
+                className="w-full bg-black text-white font-semibold py-4 rounded-2xl hover:bg-gray-800 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 text-lg disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                <FiLogIn className="mr-2" />
-                Iniciar Sesión
-              </Button>
+                {loading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Iniciando sesión...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Continuar</span>
+                    <FiArrowRight />
+                  </>
+                )}
+              </button>
             </form>
-          </CardBody>
-          
-          <CardFooter>
-            <p className="text-center text-gray-600">
-              ¿No tienes cuenta?{' '}
-              <Link 
-                to="/register" 
-                className="text-black font-semibold hover:underline"
-              >
-                Regístrate aquí
-              </Link>
-            </p>
-          </CardFooter>
-        </Card>
+            
+            <div className="mt-8 pt-6 border-t border-gray-100">
+              <p className="text-center text-gray-600">
+                ¿Primera vez aquí?{' '}
+                <Link 
+                  to="/register" 
+                  className="font-semibold text-black hover:text-gray-800 transition-colors"
+                >
+                  Crear cuenta
+                </Link>
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Trust indicators */}
+        <div className="mt-8 text-center">
+          <div className="inline-flex items-center gap-6 text-sm text-gray-500">
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+              <span>Encriptado</span>
+            </div>
+            <div className="h-4 w-px bg-gray-300"></div>
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+              <span>Privado</span>
+            </div>
+            <div className="h-4 w-px bg-gray-300"></div>
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+              <span>Sin seguimiento</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
