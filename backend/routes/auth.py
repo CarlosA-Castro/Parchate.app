@@ -1,4 +1,4 @@
-# backend/routes/auth.py - VERSIÓN COMPLETA CON JWT
+# VERSIÓN COMPLETA CON JWT
 from flask import Blueprint, request, jsonify
 from backend.app import db
 from backend.models.user import User
