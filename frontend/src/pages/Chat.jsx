@@ -7,19 +7,37 @@ import {
   FiChevronLeft,
   FiBook,
   FiTarget,
-  FiTrendingUp,
   FiZap,
-  FiClock
+  FiTrendingUp,
+  FiClock,
+  FiPlus,
+  FiTrash2
 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import ConfirmModal from '../components/ConfirmModal';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const Chat = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  const [conversations, setConversations] = useState([]);
+  const [activeConversationId, setActiveConversationId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingConversations, setLoadingConversations] = useState(true);
   const [selectedPersonality, setSelectedPersonality] = useState('estoic');
+  const [error, setError] = useState('');
+
+  // Estado del modal de confirmación
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    conversationId: null
+  });
+
   const messagesEndRef = useRef(null);
 
   const personalities = [
@@ -27,103 +45,176 @@ const Chat = () => {
       id: 'estoic',
       name: 'Guía Estoico',
       icon: <FiBook size={18} />,
-      description: 'Sabiduría de Séneca y Marco Aurelio',
-      greeting: 'Hola. La virtud está en actuar de acuerdo con la naturaleza y la razón. ¿En qué puedo ayudarte hoy?'
+      description: 'Sabiduría de Marco Aurelio y Séneca',
+      greeting: 'La virtud está en actuar de acuerdo con la razón. ¿Qué tienes en mente hoy?'
     },
     {
       id: 'coach',
       name: 'Coach',
       icon: <FiTarget size={18} />,
       description: 'Mentalidad de alto rendimiento',
-      greeting: '¡Hola! ¿Listo para superar tus límites? La disciplina supera al talento cuando el talento no se disciplina.'
+      greeting: '¿Listo para ir más allá de tus límites? Cuéntame qué está pasando.'
     },
     {
       id: 'philosopher',
       name: 'Filósofo',
       icon: <FiTrendingUp size={18} />,
-      description: 'Pensamiento crítico y profundo',
-      greeting: 'Saludos. La búsqueda del conocimiento comienza con reconocer nuestra propia ignorancia. ¿Qué cuestiones te preocupan?'
+      description: 'Pensamiento profundo y existencial',
+      greeting: 'La búsqueda del conocimiento empieza con reconocer nuestra propia ignorancia. ¿Qué te preocupa?'
     },
     {
       id: 'scientist',
       name: 'Científico',
       icon: <FiZap size={18} />,
-      description: 'Basado en psicología y neurociencia',
-      greeting: 'Hola. Desde una perspectiva neurocientífica, tu cerebro puede reconfigurarse a través de la neuroplasticidad. ¿Qué quieres explorar?'
+      description: 'Neurociencia y psicología aplicada',
+      greeting: 'Desde la neurociencia, podemos entender y cambiar casi cualquier patrón. ¿Qué quieres explorar?'
     }
   ];
 
-  useEffect(() => {
-    const selected = personalities.find(p => p.id === selectedPersonality);
-    if (selected) {
-      setMessages([{
-        id: 1,
-        text: selected.greeting,
-        sender: 'ai',
-        personality: selected.name,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }]);
+  const api = axios.create({
+    baseURL: API_URL,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${localStorage.getItem('token')}`
     }
-  }, [selectedPersonality]);
+  });
 
   useEffect(() => {
-    scrollToBottom();
+    fetchConversations();
+  }, []);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  useEffect(() => {
+    if (activeConversationId) {
+      fetchMessages(activeConversationId);
+    }
+  }, [activeConversationId]);
+
+  const fetchConversations = async () => {
+    try {
+      setLoadingConversations(true);
+      const res = await api.get('/ai/conversations');
+      setConversations(res.data.conversations || []);
+    } catch (err) {
+      setError('No se pudieron cargar las conversaciones');
+    } finally {
+      setLoadingConversations(false);
+    }
+  };
+
+  const fetchMessages = async (conversationId) => {
+    try {
+      const res = await api.get(`/ai/conversations/${conversationId}/messages`);
+      const msgs = res.data.messages || [];
+
+      if (msgs.length === 0) {
+        const selected = personalities.find(p => p.id === selectedPersonality);
+        setMessages([{
+          id: 'greeting',
+          role: 'assistant',
+          content: selected?.greeting || '¿En qué puedo ayudarte hoy?',
+          created_at: new Date().toISOString()
+        }]);
+      } else {
+        setMessages(msgs);
+      }
+    } catch (err) {
+      setError('No se pudieron cargar los mensajes');
+    }
+  };
+
+  const createConversation = async () => {
+    try {
+      const res = await api.post('/ai/conversations');
+      const newConv = res.data.conversation;
+
+      setConversations(prev => [newConv, ...prev]);
+      setActiveConversationId(newConv.id);
+
+      const selected = personalities.find(p => p.id === selectedPersonality);
+      setMessages([{
+        id: 'greeting',
+        role: 'assistant',
+        content: selected?.greeting || '¿En qué puedo ayudarte hoy?',
+        created_at: new Date().toISOString()
+      }]);
+
+      return newConv.id;
+    } catch (err) {
+      setError('No se pudo crear la conversación');
+      return null;
+    }
+  };
+
+  // Abre el modal en lugar de borrar directamente
+  const askDeleteConversation = (conversationId) => {
+    setConfirmModal({ isOpen: true, conversationId });
+  };
+
+  // Se ejecuta solo si el usuario confirma en el modal
+  const handleDeleteConversation = async () => {
+    const conversationId = confirmModal.conversationId;
+    setConfirmModal({ isOpen: false, conversationId: null });
+
+    try {
+      await api.delete(`/ai/conversations/${conversationId}`);
+      setConversations(prev => prev.filter(c => c.id !== conversationId));
+
+      if (activeConversationId === conversationId) {
+        setActiveConversationId(null);
+        setMessages([]);
+      }
+    } catch (err) {
+      setError('No se pudo eliminar la conversación');
+    }
   };
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || loading) return;
 
-    const userMessage = {
-      id: messages.length + 1,
-      text: inputMessage,
-      sender: 'user',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+    setError('');
+    const messageText = inputMessage.trim();
     setInputMessage('');
+
+    let conversationId = activeConversationId;
+    if (!conversationId) {
+      conversationId = await createConversation();
+      if (!conversationId) return;
+    }
+
+    const tempUserMsg = {
+      id: `temp-${Date.now()}`,
+      role: 'user',
+      content: messageText,
+      created_at: new Date().toISOString()
+    };
+    setMessages(prev => [...prev, tempUserMsg]);
     setLoading(true);
 
-    // Simular respuesta de IA
-    setTimeout(() => {
-      const responses = {
-        estoic: [
-          "Recuerda: No es lo que te pasa, sino cómo reaccionas a lo que te pasa lo que importa.",
-          "Concéntrate en lo que puedes controlar y acepta lo que no está en tu poder.",
-          "La virtud es su propia recompensa. Actúa bien por el bien mismo."
-        ],
-        coach: [
-          "¡No te rindas! El verdadero crecimiento ocurre fuera de tu zona de confort.",
-          "¿Qué es lo que realmente quieres? Ve por ello sin excusas.",
-          "Haz lo que tienes que hacer, cuando tienes que hacerlo, te guste o no."
-        ],
-        philosopher: [
-          "Interesante punto. Analicemos los supuestos detrás de esa afirmación.",
-          "La vida examinada es la única que merece vivirse.",
-          "¿Qué significa realmente eso para ti a nivel existencial?"
-        ],
-        scientist: [
-          "Desde una perspectiva neurocientífica, esa situación activa tu amígdala.",
-          "Los estudios muestran que practicar gratitud reduce el cortisol en un 23%.",
-          "La meditación regular aumenta la densidad de materia gris en el hipocampo."
-        ]
-      };
+    try {
+      const res = await api.post(`/ai/conversations/${conversationId}/chat`, {
+        message: messageText,
+        personality: selectedPersonality
+      });
 
-      const aiResponse = {
-        id: messages.length + 2,
-        text: responses[selectedPersonality][Math.floor(Math.random() * responses[selectedPersonality].length)],
-        sender: 'ai',
-        personality: personalities.find(p => p.id === selectedPersonality)?.name,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      const aiMsg = {
+        id: res.data.message_id,
+        role: 'assistant',
+        content: res.data.message,
+        created_at: new Date().toISOString()
       };
+      setMessages(prev => [...prev, aiMsg]);
+      fetchConversations();
 
-      setMessages(prev => [...prev, aiResponse]);
+    } catch (err) {
+      setError('Error al enviar el mensaje. Intenta de nuevo.');
+      setMessages(prev => prev.filter(m => m.id !== tempUserMsg.id));
+    } finally {
       setLoading(false);
-    }, 1200);
+    }
   };
 
   const handleKeyPress = (e) => {
@@ -133,8 +224,40 @@ const Chat = () => {
     }
   };
 
+  const handlePersonalityChange = (personalityId) => {
+    setSelectedPersonality(personalityId);
+    if (activeConversationId) {
+      const selected = personalities.find(p => p.id === personalityId);
+      setMessages(prev => [...prev, {
+        id: `system-${Date.now()}`,
+        role: 'system-notice',
+        content: `Cambiaste a ${selected?.name}. ${selected?.greeting}`,
+        created_at: new Date().toISOString()
+      }]);
+    }
+  };
+
+  const formatTime = (isoString) => {
+    return new Date(isoString).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   return (
     <div className="min-h-screen bg-white text-gray-900 flex flex-col">
+
+      {/* Modal de confirmación */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title="¿Eliminar conversación?"
+        message="Esta conversación y todos sus mensajes se eliminarán permanentemente."
+        confirmText="Sí, eliminar"
+        cancelText="Cancelar"
+        onConfirm={handleDeleteConversation}
+        onCancel={() => setConfirmModal({ isOpen: false, conversationId: null })}
+      />
+
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
         <div className="px-4 py-4">
@@ -145,25 +268,33 @@ const Chat = () => {
             >
               <FiChevronLeft size={20} />
             </button>
-            
+
             <div className="text-center">
               <h1 className="text-lg font-bold">Sabiduría IA</h1>
-              <p className="text-xs text-gray-500">Conversa con sabios</p>
+              <p className="text-xs text-gray-500">
+                {activeConversationId ? 'Conversación activa' : 'Nueva conversación'}
+              </p>
             </div>
-            
-            <div className="w-9"></div> {/* Spacer para centrar */}
+
+            <button
+              onClick={createConversation}
+              className="p-2 hover:bg-gray-100 rounded-xl"
+              title="Nueva conversación"
+            >
+              <FiPlus size={20} />
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Personality selector */}
+      {/* Selector de personalidad */}
       <div className="border-b border-gray-200">
         <div className="px-4 py-3">
           <div className="flex gap-2 overflow-x-auto">
             {personalities.map((personality) => (
               <button
                 key={personality.id}
-                onClick={() => setSelectedPersonality(personality.id)}
+                onClick={() => handlePersonalityChange(personality.id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl whitespace-nowrap transition-colors ${
                   selectedPersonality === personality.id
                     ? 'bg-black text-white'
@@ -178,104 +309,181 @@ const Chat = () => {
         </div>
       </div>
 
-      {/* Messages container */}
-      <div className="flex-1 overflow-y-auto px-4 py-6">
-        <div className="space-y-6 max-w-2xl mx-auto">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex gap-3 ${message.sender === 'user' ? 'flex-row-reverse' : ''}`}
-            >
-              {/* Avatar */}
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                message.sender === 'user' ? 'bg-black' : 'bg-gray-100'
-              }`}>
-                {message.sender === 'user' ? (
-                  <FiUser className="text-white text-sm" />
-                ) : (
-                  <span className="font-bold text-gray-800 text-sm">π</span>
-                )}
+      <div className="flex flex-1 overflow-hidden">
+
+        {/* Panel lateral — historial */}
+        <div className="hidden md:flex flex-col w-64 border-r border-gray-200 overflow-y-auto">
+          <div className="p-4">
+            <h2 className="text-sm font-medium text-gray-600 mb-3">Conversaciones</h2>
+
+            {loadingConversations ? (
+              <p className="text-xs text-gray-400">Cargando...</p>
+            ) : conversations.length === 0 ? (
+              <p className="text-xs text-gray-400">Aún no tienes conversaciones</p>
+            ) : (
+              <div className="space-y-2">
+                {conversations.map(conv => (
+                  <div
+                    key={conv.id}
+                    className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors ${
+                      activeConversationId === conv.id
+                        ? 'bg-black text-white'
+                        : 'hover:bg-gray-100'
+                    }`}
+                    onClick={() => setActiveConversationId(conv.id)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium truncate">
+                        {conv.title || 'Nueva conversación'}
+                      </p>
+                      <p className={`text-xs mt-0.5 ${
+                        activeConversationId === conv.id ? 'text-gray-300' : 'text-gray-400'
+                      }`}>
+                        {conv.message_count} mensajes
+                      </p>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        askDeleteConversation(conv.id);
+                      }}
+                      className={`p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity ${
+                        activeConversationId === conv.id
+                          ? 'hover:bg-white/20 text-white'
+                          : 'hover:bg-gray-200 text-gray-400'
+                      }`}
+                    >
+                      <FiTrash2 size={14} />
+                    </button>
+                  </div>
+                ))}
               </div>
-              
-              {/* Message bubble */}
-              <div className={`max-w-[75%] ${message.sender === 'user' ? 'text-right' : ''}`}>
-                {/* Meta info */}
-                <div className={`flex items-center gap-2 mb-1 ${message.sender === 'user' ? 'justify-end' : ''}`}>
-                  <span className="text-xs font-medium text-gray-600">
-                    {message.sender === 'user' ? 'Tú' : message.personality}
-                  </span>
-                  <span className="text-xs text-gray-400 flex items-center gap-1">
-                    <FiClock size={10} />
-                    {message.timestamp}
-                  </span>
+            )}
+          </div>
+        </div>
+
+        {/* Panel principal — mensajes */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+
+          <div className="flex-1 overflow-y-auto px-4 py-6">
+            <div className="space-y-6 max-w-2xl mx-auto">
+
+              {!activeConversationId && messages.length === 0 && (
+                <div className="text-center py-16">
+                  <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <FiMessageSquare className="text-gray-400" size={28} />
+                  </div>
+                  <h3 className="font-medium text-gray-700 mb-2">Inicia una conversación</h3>
+                  <p className="text-sm text-gray-500">
+                    Selecciona una personalidad y escribe lo que tienes en mente
+                  </p>
                 </div>
-                
-                {/* Message content */}
-                <div className={`p-4 rounded-2xl ${
-                  message.sender === 'user'
-                    ? 'bg-black text-white'
-                    : 'bg-gray-100 text-gray-800'
-                }`}>
-                  <p className="whitespace-pre-wrap leading-relaxed">{message.text}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-          
-          {/* Loading indicator */}
-          {loading && (
-            <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                <span className="font-bold text-gray-800 text-sm">π</span>
-              </div>
-              <div className="max-w-[75%]">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-medium text-gray-600">
-                    {personalities.find(p => p.id === selectedPersonality)?.name}
-                  </span>
-                </div>
-                <div className="p-4 rounded-2xl bg-gray-100">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+              )}
+
+              {messages.map((message) => {
+                if (message.role === 'system-notice') {
+                  return (
+                    <div key={message.id} className="flex justify-center">
+                      <span className="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full">
+                        {message.content}
+                      </span>
+                    </div>
+                  );
+                }
+
+                const isUser = message.role === 'user';
+                return (
+                  <div key={message.id} className={`flex gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                      isUser ? 'bg-black' : 'bg-gray-100'
+                    }`}>
+                      {isUser ? (
+                        <FiUser className="text-white text-sm" />
+                      ) : (
+                        <span className="font-bold text-gray-800 text-sm">π</span>
+                      )}
+                    </div>
+
+                    <div className={`max-w-[75%] ${isUser ? 'text-right' : ''}`}>
+                      <div className={`flex items-center gap-2 mb-1 ${isUser ? 'justify-end' : ''}`}>
+                        <span className="text-xs font-medium text-gray-600">
+                          {isUser ? 'Tú' : personalities.find(p => p.id === selectedPersonality)?.name}
+                        </span>
+                        <span className="text-xs text-gray-400 flex items-center gap-1">
+                          <FiClock size={10} />
+                          {formatTime(message.created_at)}
+                        </span>
+                      </div>
+
+                      <div className={`p-4 rounded-2xl ${
+                        isUser ? 'bg-black text-white' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {loading && (
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                    <span className="font-bold text-gray-800 text-sm">π</span>
+                  </div>
+                  <div className="max-w-[75%]">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-medium text-gray-600">
+                        {personalities.find(p => p.id === selectedPersonality)?.name}
+                      </span>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-gray-100">
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
-          
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
+              )}
 
-      {/* Input area */}
-      <div className="sticky bottom-0 bg-white border-t border-gray-200 px-4 py-4">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <textarea
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Escribe tu mensaje..."
-                className="w-full p-4 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent resize-none bg-white"
-                rows={2}
-                disabled={loading}
-              />
+              {error && (
+                <div className="flex justify-center">
+                  <span className="text-xs text-red-500 bg-red-50 px-3 py-1 rounded-full">{error}</span>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
             </div>
-            
-            <button
-              onClick={handleSendMessage}
-              disabled={loading || !inputMessage.trim()}
-              className="self-end p-4 bg-black text-white rounded-2xl hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-            >
-              <FiSend size={20} />
-            </button>
           </div>
-          
-          <div className="mt-3 text-xs text-gray-500 text-center">
-            <p>Las conversaciones son privadas y encriptadas</p>
+
+          {/* Input */}
+          <div className="sticky bottom-0 bg-white border-t border-gray-200 px-4 py-4">
+            <div className="max-w-2xl mx-auto">
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <textarea
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder={`Escribe a ${personalities.find(p => p.id === selectedPersonality)?.name}...`}
+                    className="w-full p-4 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent resize-none bg-white"
+                    rows={2}
+                    disabled={loading}
+                  />
+                </div>
+                <button
+                  onClick={handleSendMessage}
+                  disabled={loading || !inputMessage.trim()}
+                  className="self-end p-4 bg-black text-white rounded-2xl hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                >
+                  <FiSend size={20} />
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-gray-400 text-center">
+                Las conversaciones son privadas y encriptadas
+              </p>
+            </div>
           </div>
         </div>
       </div>
