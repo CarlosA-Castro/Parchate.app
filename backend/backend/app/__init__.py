@@ -57,4 +57,7 @@ def create_app():
     from ..routes.password_reset import password_reset_bp
     app.register_blueprint(password_reset_bp, url_prefix='/api/auth')
 
+    from ..routes.analysis import analysis_bp
+    app.register_blueprint(analysis_bp, url_prefix='/api/analysis')
+
     return app
