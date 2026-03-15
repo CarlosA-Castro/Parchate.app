@@ -22,16 +22,16 @@ def create_app():
     )
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    CORS(app, resources={
-        r'/api/*': {
-            'origins': [
-                'https://parchate-app-sepia.vercel.app',
-                'http://localhost:5173',
-                'http://localhost:3000',
-            ],
-            'supports_credentials': True
-        }
-    })
+    CORS(app, 
+     origins=[
+         'https://parchate-app-sepia.vercel.app',
+         'http://localhost:5173',
+         'http://localhost:3000',
+     ],
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+     allow_headers=['Content-Type', 'Authorization'],
+     supports_credentials=True
+)
 
     db.init_app(app)
 
