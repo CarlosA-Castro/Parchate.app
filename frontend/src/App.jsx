@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { useAuth } from './context/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -14,7 +15,9 @@ import Chat from './pages/Chat';
 import Profile from './pages/Profile';
 
 const OnboardingGuard = ({ children }) => {
-  const done = localStorage.getItem('parchate_onboarding_done');
+  const { user } = useAuth();
+  const key = user ? `parchate_onboarding_done_${user.id}` : 'parchate_onboarding_done';
+  const done = localStorage.getItem(key);
   if (!done) return <Navigate to="/onboarding" replace />;
   return children;
 };

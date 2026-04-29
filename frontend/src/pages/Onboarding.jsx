@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { FiArrowRight, FiArrowLeft, FiCheck } from 'react-icons/fi';
 
 const questions = [
@@ -71,6 +72,7 @@ const themeDescriptions = {
 
 const Onboarding = () => {
   const { changeTheme, themes, currentTheme } = useTheme();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [step, setStep] = useState(0);
@@ -164,7 +166,8 @@ const Onboarding = () => {
   };
 
   const handleFinish = () => {
-    localStorage.setItem('parchate_onboarding_done', 'true');
+    const key = user ? `parchate_onboarding_done_${user.id}` : 'parchate_onboarding_done';
+    localStorage.setItem(key, 'true');
     navigate('/dashboard', { replace: true });
   };
 
